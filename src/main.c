@@ -34,7 +34,7 @@
 #include "raw_terminal.h"
 
 
-/* -------------------- STATIC PROTOTYPES -------------------- */
+/* ---------------------------- STATIC PROTOTYPES ---------------------------- */
 
 /**
  * Callback function registered with atexit()
@@ -42,7 +42,7 @@
 static void at_exit_callback(void);
 
 
-/* -------------------- MAIN -------------------- */
+/* ---------------------------------- MAIN ----------------------------------- */
 
 int main(int argc, char *argv[]) {
     int   i;
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 }
 
 
-/* -------------------- STATIC FUNCTIONS -------------------- */
+/* ---------------------------- STATIC FUNCTIONS ----------------------------- */
 
 static void at_exit_callback(void) {
     /* Close file if open */

@@ -21,7 +21,7 @@
 # SOFTWARE.
 
 
-# -------------------- VARIABLES --------------------
+# ---------------------------------- VARIABLES ----------------------------------
 # User-defined variables
 SRC_DIR   := src
 OBJS_DIR  := objs
@@ -41,7 +41,7 @@ CFLAGS  := -std=c89 -I$(INC_DIR) -Wall -Wextra -pedantic -g #-Werror
 LDFLAGS := -lc
 
 
-# -------------------- GOALS --------------------
+# ------------------------------------ GOALS ------------------------------------
 .PHONY: release clean
 
 # Main goal
@@ -66,7 +66,7 @@ clean:
 	$(RM) -r $(BUILD_DIR)
 
 
-# -------------------- DEPENDENCIES --------------------
+# -------------------------------- DEPENDENCIES ---------------------------------
 ifneq ($(MAKECMDGOALS), clean)
 include $(DEPS)
 endif

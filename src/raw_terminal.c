@@ -57,7 +57,7 @@
 #define RHD_VT100_CUR_SHOW   "\x1b[?25h"
 
 
-/* -------------------- TYPEDEFS -------------------- */
+/* -------------------------------- TYPEDEFS --------------------------------- */
 
 /**
  * Enum type that describes the SIGWINCH handler state
@@ -105,7 +105,7 @@ typedef struct output_tag {
 } output_t;
 
 
-/* -------------------- STATIC VARIABLES -------------------- */
+/* ---------------------------- STATIC VARIABLES ----------------------------- */
 
 /**
  * Struct that defines the hex output
@@ -143,7 +143,7 @@ static struct terminal_tag {
 } term;
 
 
-/* -------------------- STATIC PROTOTYPES -------------------- */
+/* ---------------------------- STATIC PROTOTYPES ---------------------------- */
 
 /* 
  * Handles SIGWINCH signal, and sets term.screenRows, term.screenCols and sigwinch.state accordingly
@@ -196,7 +196,7 @@ static int refresh_screen(void);
 static int draw_rows(abuf_t *ab);
 
 
-/* -------------------- GLOBAL FUNCTIONS -------------------- */
+/* ---------------------------- GLOBAL FUNCTIONS ----------------------------- */
 
 /* TERMINAL */
 
@@ -334,7 +334,7 @@ int start_term_loop(void) {
 }
 
 
-/* -------------------- STATIC FUNCTIONS -------------------- */
+/* ---------------------------- STATIC FUNCTIONS ----------------------------- */
 
 /* SIGNAL */
 

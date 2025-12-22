@@ -42,7 +42,7 @@
 #define RHD_FILE_INIT {RHD_FILE_STATE_CLOSE, 0, NULL}
 
 
-/* -------------------- TYPEDEFS -------------------- */
+/* -------------------------------- TYPEDEFS --------------------------------- */
 
 /**
  * Enum that describes the state of the file
@@ -53,7 +53,7 @@ typedef enum file_state_tag {
 } file_state_t;
 
 
-/* -------------------- STATIC VARIABLES -------------------- */
+/* ---------------------------- STATIC VARIABLES ----------------------------- */
 
 /**
  * Struct containing informations about the file
@@ -65,7 +65,7 @@ static struct file_tag {
 } file = RHD_FILE_INIT;
 
 
-/* -------------------- GLOBAL FUNCTIONS -------------------- */
+/* ---------------------------- GLOBAL FUNCTIONS ----------------------------- */
 
 /* OPEN / CLOSE / GETTERS */
 
