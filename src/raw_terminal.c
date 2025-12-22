@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+/** @file raw_terminal.c */
 
 
 #define _XOPEN_SOURCE 700  /* Incorporating POSIX 2017 (for sigaction) */
