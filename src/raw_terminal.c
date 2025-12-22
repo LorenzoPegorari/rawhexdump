@@ -1,4 +1,26 @@
-/* COPYRIGHT & LICENSE */
+/*
+ * MIT License
+ *
+ * Copyright (c) 2025 Lorenzo Pegorari (@LorenzoPegorari)
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 
 
 #define _XOPEN_SOURCE 700  /* Incorporating POSIX 2017 (for sigaction) */
@@ -123,25 +145,25 @@ static struct terminal_tag {
 
 /* -------------------- STATIC PROTOTYPES -------------------- */
 
-/* 
+/*
  * Handles SIGWINCH signal, and sets term.screenRows, term.screenCols and sigwinch.state accordingly
  * If successful sets sigwinch.state to 0, else 1
  */
 static void sigwinch_handler(int sig);
 
-/* 
+/*
  * Uses ioctl() to get terminal window size
  * If successful returns 0, else 1
  */
 static int get_term_win_size(void);
 
-/* 
+/*
  * Saves active output
  * If successful returns 0, else 1
  */
 static int save_output(void);
 
-/* 
+/*
  * Changes active output
  * If successful returns 0, else 1
  */
@@ -153,7 +175,7 @@ static int change_output(const output_name_t output_name);
  */
 static int adjust_outputs_after_term_win_resize(void);
 
-/* 
+/*
  * Handles inputs
  * Returns:
  * - RHD_KEYPRESS_IGNORE = no refreshing required
@@ -163,7 +185,7 @@ static int adjust_outputs_after_term_win_resize(void);
  */
 static int process_keypress(void);
 
-/* 
+/*
  * Reads key from stdin
  * If successful returns 0, else 1
  */
