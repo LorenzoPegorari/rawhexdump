@@ -36,7 +36,6 @@
 
 #define RHD_ERROR_FILE1  "ERROR: Could not open file!"
 #define RHD_ERROR_FILE2  "ERROR: Could not close opened file!"
-#define RHD_ERROR_FILE3  "ERROR: Given file was not recognized as an ELF file!"
 
 #define RHD_ERROR_TERM1  "ERROR: Could not set sigaction for SIGWINCH!"
 #define RHD_ERROR_TERM2  "ERROR: Could not raise SIGWINCH!"
