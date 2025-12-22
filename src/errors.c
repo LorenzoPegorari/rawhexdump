@@ -25,6 +25,7 @@
 
 
 /* C89 standard */
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +34,8 @@
 
 
 #define RHD_ERRORS_QUEUE_MAX 64
+
+#define RHD_ERRORS_BUFFER_LEN 512
 
 #define RHD_ERRORS_QUEUE_INIT {0, {NULL}}
 
@@ -43,22 +46,63 @@ static struct errors_queue_tag {
 } errors_queue = RHD_ERRORS_QUEUE_INIT;
 
 
-void error_queue(const char* error) {
-    char* str_ptr;
+void error_queue(const char* args, ...) {
+    va_list     ap;
+    char        buf[RHD_ERRORS_BUFFER_LEN];
+    const char* format;
+    char*       final;
+    size_t      format_len;
+    size_t      final_len;
 
+    /* If error queue is full, print warning and return */
     if (errors_queue.len >= RHD_ERRORS_QUEUE_MAX) {
         fprintf(stderr, "%s\n", RHD_WARNING_QUEUE1);
         return;
     }
 
-    str_ptr = (char*)malloc(strlen(error) + 1);
-    if (str_ptr == NULL) {
+    /* Initialize args */
+    va_start(ap, args);
+    format = (const char*)args;
+    args = va_arg(ap, const char*);
+
+    /* Read all chars of format, and copy them in buf, substituting all instances
+       of "%s" with the correct arg (in order) */
+    format_len = 0;
+    final_len = 0;
+    while (format_len < strlen(format)) {
+        if (format[format_len] == '%' && format[format_len + 1] == 's') {
+            /* Substitute all "%s" occurrences with the correct arg (in order).
+                If the are more args than "%s", the excess args are ignored.
+                If the are more "%s" than args, an error is raised. */
+            if (args != NULL) {
+                strcpy(&(buf[final_len]), args);
+                final_len += strlen(args);
+                args = va_arg(ap, const char*);
+                format_len += 2;
+            } else {
+                fprintf(stderr, "%s\n", RHD_ERROR_QUEUE2);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            /* Simply copy all other chars that are not "%s" */
+            buf[final_len++] = format[format_len++];
+        }
+    }
+    buf[final_len++] = '\0';
+
+    /* Cleanup */
+    va_end(ap);
+
+    /* Copy the buffer in the final string */
+    final = (char*)malloc(final_len);
+    if (final == NULL) {
         fprintf(stderr, "%s\n", RHD_ERROR_QUEUE1);
         exit(EXIT_FAILURE);
     }
-    strcpy(str_ptr, error);
+    strcpy(final, buf);
 
-    errors_queue.messages[errors_queue.len++] = str_ptr;
+    /* Queue the final string */
+    errors_queue.messages[errors_queue.len++] = final;
 }
 
 

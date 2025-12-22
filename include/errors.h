@@ -29,6 +29,7 @@
 
 
 #define RHD_ERROR_QUEUE1 "ERROR: Failed to queue error!"
+#define RHD_ERROR_QUEUE2 "ERROR: Error in errors_queue() arguments!"
 
 #define RHD_ERROR_ARG1   "ERROR: Arguments missing!"
 #define RHD_ERROR_ARG2   "ERROR: Given too many files! (maybe an unrecognized argument was passed?)"
@@ -50,9 +51,10 @@
 
 
 /**
- * Add given "error" message to queue
+ * Add given "error" message to queue.
+ * All "%s" in the first passed arg will be substituted by the other passed strings
  */
-void error_queue(const char* error);
+void error_queue(const char* args, ...);
 
 /**
  * Print all queued error messages, emptying the queue
