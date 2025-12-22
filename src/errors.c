@@ -40,11 +40,15 @@
 #define RHD_ERRORS_QUEUE_INIT {0, {NULL}}
 
 
+/* ---------------------------- STATIC VARIABLES ----------------------------- */
+
 static struct errors_queue_tag {
-    unsigned int len;
-    char*        messages[RHD_ERRORS_QUEUE_MAX];
+    size_t len;
+    char*  messages[RHD_ERRORS_QUEUE_MAX];
 } errors_queue = RHD_ERRORS_QUEUE_INIT;
 
+
+/* ---------------------------- GLOBAL FUNCTIONS ----------------------------- */
 
 void error_queue(const char* args, ...) {
     va_list     ap;
@@ -109,6 +113,7 @@ void error_queue(const char* args, ...) {
 void error_flush(void) {
     unsigned int i;
 
+    /* Print all errors, and free them */
     for (i = 0; i < errors_queue.len; ++i) {
         fprintf(stderr, "%s\n", errors_queue.messages[i]);
         free(errors_queue.messages[i]);

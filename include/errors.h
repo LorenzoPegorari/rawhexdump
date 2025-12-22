@@ -36,7 +36,6 @@
 
 #define RHD_ERROR_FILE1  "ERROR: Could not open file!"
 #define RHD_ERROR_FILE2  "ERROR: Could not close opened file!"
-#define RHD_ERROR_FILE3  "ERROR: Given file was not recognized as an ELF file!"
 
 #define RHD_ERROR_TERM1  "ERROR: Could not set sigaction for SIGWINCH!"
 #define RHD_ERROR_TERM2  "ERROR: Could not raise SIGWINCH!"
@@ -45,9 +44,11 @@
 #define RHD_ERROR_TERM5  "ERROR: Could not set terminal raw state!"
 #define RHD_ERROR_TERM6  "ERROR: Could not set terminal initial state!"
 
+
 #define RHD_WARNING_QUEUE1 "WARNING: Error queue is full!"
 
 #define RHD_WARNING_TERM1  "WARNING: Terminal was not initialized!"
+
 
 #define RHD_TIP_HELP1 "Usage: %s [-v | --version] [-h | --help] <file-path>"
 
