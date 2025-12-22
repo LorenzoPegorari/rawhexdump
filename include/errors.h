@@ -44,9 +44,11 @@
 #define RHD_ERROR_TERM5  "ERROR: Could not set terminal raw state!"
 #define RHD_ERROR_TERM6  "ERROR: Could not set terminal initial state!"
 
+
 #define RHD_WARNING_QUEUE1 "WARNING: Error queue is full!"
 
 #define RHD_WARNING_TERM1  "WARNING: Terminal was not initialized!"
+
 
 #define RHD_TIP_HELP1 "Usage: %s [-v | --version] [-h | --help] <file-path>"
 
