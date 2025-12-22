@@ -50,7 +50,8 @@
 /* ---------------------------- STATIC PROTOTYPES ---------------------------- */
 
 /**
- * Callback function registered with atexit()
+ * Callback function registered with atexit() that handles open files, the
+ * terminal status, and printing error messages
  */
 static void at_exit_callback(void);
 
@@ -62,14 +63,17 @@ int main(int argc, char *argv[]) {
     int   ret;
     char* filename;
 
+    /* Register at_exit_callback() */
     atexit(at_exit_callback);
 
+    /* If no arguments were given, exit */
     if (argc < 2) {
         error_queue(RHD_ERROR_ARG1);
         error_queue(RHD_TIP_HELP1, argv[0]);
         exit(EXIT_FAILURE);
     }
 
+    /* Handle arguments */
     filename = NULL;
     for (i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
@@ -93,12 +97,14 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    /* Open given file */
     if (file_open(filename, "rb") != 0) {
         error_queue(RHD_ERROR_FILE1);
         error_queue(strerror(errno));
         exit(EXIT_FAILURE);
     }
 
+    /* Put the terminal in raw mode */
     if (init_term_raw_mode() != 0) {
         exit(EXIT_FAILURE);
     }
