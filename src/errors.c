@@ -41,8 +41,8 @@
 
 
 static struct errors_queue_tag {
-    unsigned int len;
-    char*        messages[RHD_ERRORS_QUEUE_MAX];
+    size_t len;
+    char*  messages[RHD_ERRORS_QUEUE_MAX];
 } errors_queue = RHD_ERRORS_QUEUE_INIT;
 
 
