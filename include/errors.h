@@ -49,6 +49,8 @@
 
 #define RHD_WARNING_TERM1  "WARNING: Terminal was not initialized!"
 
+#define RHD_TIP_HELP1 "Usage: %s [-v | --version] [-h | --help] <file-path>"
+
 
 /**
  * Add given "error" message to queue.

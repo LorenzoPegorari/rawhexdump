@@ -24,6 +24,18 @@
 /** @file main.c */
 
 
+/* Two-step macro (with extra level of indirection) to allow the preprocessor
+   to expand the macros before they are converted to strings */
+#define STR_HELPER(x) #x
+#define STR(x) STR_HELPER(x)
+
+#define RHD_MAIN_VER_MAJOR 0
+#define RHD_MAIN_VER_MINOR 1
+#define RHD_MAIN_VER_PATCH 0
+
+#define RHD_MAIN_VER STR(RHD_MAIN_VER_MAJOR) "." STR(RHD_MAIN_VER_MINOR) "." STR(RHD_MAIN_VER_PATCH)
+
+
 /* C89 standard */
 #include <errno.h>
 #include <stdio.h>
@@ -54,13 +66,23 @@ int main(int argc, char *argv[]) {
 
     if (argc < 2) {
         error_queue(RHD_ERROR_ARG1);
+        error_queue(RHD_TIP_HELP1, argv[0]);
         exit(EXIT_FAILURE);
     }
 
     filename = NULL;
     for (i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            /* TODO */
+            fprintf(stdout, RHD_TIP_HELP1, argv[0]);
+            fprintf(stdout, "\n\nUsable commands:\n");
+            fprintf(stdout, "    H      = hexadecimal view (linked to char view)\n");
+            fprintf(stdout, "    C      = char view (linked to hexadecimal view)\n");
+            fprintf(stdout, "    CTRL+C = compacted char view\n");
+            fprintf(stdout, "    CTRL+Q = quit\n");
+            exit(EXIT_SUCCESS);
+        } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
+            fprintf(stdout, "%s version %s\n", argv[0], RHD_MAIN_VER);
+            exit(EXIT_SUCCESS);
         } else {
             if (filename == NULL) {
                 filename = argv[i];
