@@ -28,31 +28,6 @@
 #define RHD_ERRORS_INCLUDE
 
 
-#define RHD_ERROR_QUEUE1 "ERROR: Failed to queue error!"
-#define RHD_ERROR_QUEUE2 "ERROR: Error in errors_queue() arguments!"
-
-#define RHD_ERROR_ARG1   "ERROR: Arguments missing!"
-#define RHD_ERROR_ARG2   "ERROR: Given too many files! (maybe an unrecognized argument was passed?)"
-
-#define RHD_ERROR_FILE1  "ERROR: Could not open file!"
-#define RHD_ERROR_FILE2  "ERROR: Could not close opened file!"
-
-#define RHD_ERROR_TERM1  "ERROR: Could not set sigaction for SIGWINCH!"
-#define RHD_ERROR_TERM2  "ERROR: Could not raise SIGWINCH!"
-#define RHD_ERROR_TERM3  "ERROR: Error while handling SIGWINCH!"
-#define RHD_ERROR_TERM4  "ERROR: Could not get terminal initial state!"
-#define RHD_ERROR_TERM5  "ERROR: Could not set terminal raw state!"
-#define RHD_ERROR_TERM6  "ERROR: Could not set terminal initial state!"
-
-
-#define RHD_WARNING_QUEUE1 "WARNING: Error queue is full!"
-
-#define RHD_WARNING_TERM1  "WARNING: Terminal was not initialized!"
-
-
-#define RHD_TIP_HELP1 "Usage: %s [-v | --version] [-h | --help] <file-path>"
-
-
 /**
  * Add given "error" message to queue.
  * All "%s" in the first passed arg will be substituted by the other passed strings

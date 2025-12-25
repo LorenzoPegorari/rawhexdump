@@ -60,7 +60,7 @@ void error_queue(const char* args, ...) {
 
     /* If error queue is full, print warning and return */
     if (errors_queue.len >= RHD_ERRORS_QUEUE_MAX) {
-        fprintf(stderr, "%s\n", RHD_WARNING_QUEUE1);
+        fprintf(stderr, "%s\n", "WARNING: Error queue is full!");
         return;
     }
 
@@ -84,7 +84,7 @@ void error_queue(const char* args, ...) {
                 args = va_arg(ap, const char*);
                 format_len += 2;
             } else {
-                fprintf(stderr, "%s\n", RHD_ERROR_QUEUE2);
+                fprintf(stderr, "%s\n", "ERROR: Error in errors_queue() arguments!");
                 exit(EXIT_FAILURE);
             }
         } else {
@@ -100,7 +100,7 @@ void error_queue(const char* args, ...) {
     /* Copy the buffer in the final string */
     final = (char*)malloc(final_len);
     if (final == NULL) {
-        fprintf(stderr, "%s\n", RHD_ERROR_QUEUE1);
+        fprintf(stderr, "%s\n", "ERROR: Failed to queue error!");
         exit(EXIT_FAILURE);
     }
     strcpy(final, buf);
@@ -111,7 +111,7 @@ void error_queue(const char* args, ...) {
 
 
 void error_flush(void) {
-    unsigned int i;
+    size_t i;
 
     /* Print all errors, and free them */
     for (i = 0; i < errors_queue.len; ++i) {
