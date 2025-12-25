@@ -29,34 +29,35 @@
 
 
 /**
- * Initialize terminal data, assigns SIGWINCH signal handler and enables raw mode
+ * Initialize terminal data, assigns SIGWINCH signal handler and enables raw mode.
  * If successful returns 0, else:
- * - 1 = couldn't set sigaction for SIGWINCH
- * - 2 = couldn't raise SIGWINCH
- * - 3 = error while handling SIGWINCH
- * - 4 = couldn't get terminal initial state
- * - 5 = couldn't set terminal raw state
+ * - 1 = couldn't open given file
+ * - 2 = couldn't set exit handler
+ * - 3 = couldn't set sigaction for SIGWINCH
+ * - 4 = couldn't raise SIGWINCH
+ * - 5 = error while handling SIGWINCH
+ * - 6 = couldn't get terminal initial state
+ * - 7 = couldn't set terminal raw state
  */
-int init_term_raw_mode(void);
+int term_init(const char* filename);
 
 /**
- * Disable raw mode for terminal, returning to initial state
- * If successful returns 0, else 1 
+ * Disable raw mode for terminal, returning to initial state.
+ * If successful returns 0, else:
+ * - 1 = couldn't set terminal initial state
+ * - 2 = couldn't close file
  */
-int disable_term_raw_mode(void);
+int term_disable_raw_mode(void);
 
 /**
- * If terminal is in raw mode returns 1, else 0
- */
-int is_term_in_raw_mode(void);
-
-/**
- * Enter in terminal loop
+ * Enter in terminal loop.
  * If successfull (exits when "quit input" received) returns 0, else:
  * - 1 = error while processing a keypress
  * - 2 = couldn't refresh the screen
+ * - 3 = couldn't clear the screen
+ * - 4 = error while handling SIGWINCH
  */
-int start_term_loop(void);
+int term_loop(void);
 
 
 #endif  /* RHD_RAW_TERMINAL_INCLUDE */

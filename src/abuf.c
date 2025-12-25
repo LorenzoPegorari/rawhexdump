@@ -31,8 +31,10 @@
 #include "abuf.h"
 
 
-unsigned int ab_append(abuf_t *ab, const char *s, const size_t len) {
-    char *new_b;
+/* ---------------------------- GLOBAL FUNCTIONS ----------------------------- */
+
+int ab_append(abuf_t* ab, const char* s, const size_t len) {
+    char* new_b;
 
     if ((new_b = realloc(ab->b, ab->len + len)) == NULL)
         return 1;
@@ -43,6 +45,7 @@ unsigned int ab_append(abuf_t *ab, const char *s, const size_t len) {
     return 0;
 }
 
-void ab_free(abuf_t *ab) {
+
+void ab_free(abuf_t* ab) {
     free(ab->b);
 }

@@ -37,19 +37,19 @@
 
 /* struct for string that supports append method */
 typedef struct abuf_tag {
-    char *b;
+    char*  b;
     size_t len;
 } abuf_t;
 
 
 /* 
- * Appends len bytes from string s to ab
- * If successful returns 0, else 1 
+ * Appends "len" bytes from string "s" to "ab".
+ * If successful returns 0, else 1.
  */
-unsigned int ab_append(abuf_t *ab, const char *s, const size_t len);
+int ab_append(abuf_t* ab, const char* s, const size_t len);
 
 /* Frees ab */
-void ab_free(abuf_t *ab);
+void ab_free(abuf_t* ab);
 
 
 #endif

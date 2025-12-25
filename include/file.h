@@ -29,46 +29,71 @@
 
 
 /* C89 standard */
+#include <errno.h>
 #include <stddef.h>
 
 #include "abuf.h"
 
 
-/* 
- * Opens specified file with specified mode and sets is_file_open
- * If successful returns 0, else 1
+/**
+ * Opens given "filename" file with given "modes".
+ * If successful returns 0, else:
+ *  - -1 = file already open
+ *  -  1 = error while opening given file
+ *  -  2 = error in file position indicator
  */
-unsigned char file_open(const char* filename, const char* modes);
+int file_open(const char* filename, const char* modes);
 
-/* 
- * Closes opened file
- * If successful returns 0, else 1
+/**
+ * Closes opened file.
+ * If successful returns 0, else 1.
  */
-unsigned char file_close(void);
+int file_close(void);
 
-/* If file is open returns 1, else 0 */
-unsigned char file_is_open(void);
-
-/* 
- * Closes opened file
- * If successful returns 0, else 1
+/**
+ * Appends to given "ab" the given "len" amount of bytes (chars), read from the file.
+ * If successful returns the amount of bytes actually read, else 0. 
  */
-size_t file_append_bytes(abuf_t *ab, const size_t len);
+size_t file_append_bytes(abuf_t* ab, const size_t len);
 
-size_t file_append_hexs(abuf_t *ab, const size_t len);
+/**
+ * Appends to given "ab" the given "len" amount of bytes in hexadecimal form, with
+ * a space in between the (like this: "xx xx xx"), read from the file.
+ * If successful returns the amount of bytes actually read, else 0.
+ */
+size_t file_append_formatted_hexs(abuf_t* ab, const size_t len);
 
-size_t file_append_formatted_chars(abuf_t *ab, const size_t len);
+/**
+ * Appends to given "ab" the given "len" amount of bytes in ASCII form, with
+ * a space in between the (like this: " c  c  c"), read from the file.
+ * If successful returns the amount of bytes actually read, else 0.
+ */
+size_t file_append_formatted_chars(abuf_t* ab, const size_t len);
 
-size_t file_append_chars(abuf_t *ab, const size_t len);
+/**
+ * Appends to given "ab" the given "len" amount of bytes in ASCII form read from the file.
+ * If successful returns the amount of bytes actually read, else 0.
+ */
+size_t file_append_chars(abuf_t* ab, const size_t len);
 
-unsigned char file_move(const long int bytes);
+/**
+ * Move file position indicator.
+ * If the file position indicator would go out of the file (towards SEEK_SET), it moves to SEEK_SET.
+ * If the file position indicator would go out of the file (towards SEEK_END), it doesn't move.
+ * If successful returns 0, else 1.
+ */
+int file_move(const long int bytes);
 
-unsigned char file_will_be_end(const long int bytes);
-
+/**
+ * If file is open returns current file position, else -1
+ */
 long int file_tell(void);
 
-unsigned char file_seek_set(const long bytes);
+/**
+ * Move file position indicator relative from the beginning of the file.
+ * If successful returns 0, else 1.
+ */
+int file_seek_set(const long bytes);
 
-/*unsigned char generate_elf_table(const char *__filename, const char *__modes);*/
 
 #endif
