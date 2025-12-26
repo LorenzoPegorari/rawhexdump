@@ -22,6 +22,7 @@
 
 
 # ---------------------------------- VARIABLES ----------------------------------
+
 # User-defined variables
 SRC_DIR   := src
 OBJS_DIR  := objs
@@ -42,6 +43,7 @@ LDFLAGS := -lc
 
 
 # ------------------------------------ GOALS ------------------------------------
+
 .PHONY: release clean
 
 # Main goal
@@ -67,6 +69,7 @@ clean:
 
 
 # -------------------------------- DEPENDENCIES ---------------------------------
+
 ifneq ($(MAKECMDGOALS), clean)
 include $(DEPS)
 endif
