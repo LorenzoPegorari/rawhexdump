@@ -56,6 +56,7 @@ int term_disable_raw_mode(void);
  * - 2 = couldn't refresh the screen
  * - 3 = couldn't clear the screen
  * - 4 = error while handling SIGWINCH
+ * - 5 = error in function write()
  */
 int term_loop(void);
 

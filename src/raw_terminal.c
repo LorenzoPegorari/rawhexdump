@@ -356,10 +356,19 @@ int term_loop(void) {
     int        ret;
     keypress_t keypress;
 
+    /* Initialize variables */
     ret      = 0;
     keypress = RHD_TERM_KEYPRESS_ACT;
 
     term_is_in_loop = RHD_TERM_LOOP_TRUE;
+
+    /* Hide cursor */
+    if (write(STDOUT_FILENO, RHD_TERM_VT100_CUR_HIDE, sizeof(RHD_TERM_VT100_CUR_HIDE) - 1) == -1) {
+        error_queue("ERROR: Function write() failed!");
+        return 5;
+    }
+
+    /* Loop */
     do {
         /* Check if an eventual SIGWINCH was handled correctly */
         if (sigwinch.state == RHD_TERM_SIGWINCH_STATE_ERROR) {
@@ -393,7 +402,14 @@ int term_loop(void) {
         }
     }
 
+    /* Show cursor */
+    if (write(STDOUT_FILENO, RHD_TERM_VT100_CUR_SHOW, sizeof(RHD_TERM_VT100_CUR_SHOW) - 1) == -1) {
+        error_queue("ERROR: Function write() failed!");
+        return 5;
+    }
+
     term_is_in_loop = RHD_TERM_LOOP_FALSE;
+
     return ret;
 }
 
@@ -654,10 +670,6 @@ static int term_screen_refresh(void) {
     abuf_t ab = ABUF_INIT;
 
     /* Initialize start of "ab" for screen refresh */
-    if (ab_append(&ab, RHD_TERM_VT100_CUR_HIDE, sizeof(RHD_TERM_VT100_CUR_HIDE) - 1) == 1) {
-        error_queue("ERROR: Function ab_append() failed!");
-        return 1;
-    }
     if (ab_append(&ab, RHD_TERM_VT100_CUR_TOP_LEFT, sizeof(RHD_TERM_VT100_CUR_TOP_LEFT) - 1) == 1) {
         error_queue("ERROR: Function ab_append() failed!");
         return 1;
@@ -668,10 +680,6 @@ static int term_screen_refresh(void) {
 
     /* Initialize end of "ab" for screen refresh */
     if (ab_append(&ab, RHD_TERM_VT100_CUR_TOP_LEFT, sizeof(RHD_TERM_VT100_CUR_TOP_LEFT) - 1) == 1) {
-        error_queue("ERROR: Function ab_append() failed!");
-        return 1;
-    }
-    if (ab_append(&ab, RHD_TERM_VT100_CUR_SHOW, sizeof(RHD_TERM_VT100_CUR_SHOW) - 1) == 1) {
         error_queue("ERROR: Function ab_append() failed!");
         return 1;
     }
