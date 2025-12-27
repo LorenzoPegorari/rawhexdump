@@ -583,11 +583,16 @@ static int term_process_keypress(void) {
     char         c;
     unsigned int i;
 
-    row_len = term.active_output->row_len;
-
     /* Read key */
     if (term_read_key(&c) != 0)
         return RHD_TERM_KEYPRESS_ERROR;
+
+    /* Saving the "row_len" needs to happen after term_read_key().
+       This is because term_read_key() is where the loop interrupts to wait for stdin.
+       While it is interrupted, if the terminal window is resized, the signal SIGWINCH
+       will be handled, possibly modifing all outputs' "row_len". But when the execution
+       resumes, the old "row_len" will be used. */
+    row_len = term.active_output->row_len;
 
     /* Handle keypress */
     switch (c) {
