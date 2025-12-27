@@ -36,9 +36,9 @@ SRCS := $(shell find $(SRC_DIR) -name '*.c')
 OBJS := $(addprefix $(BUILD_DIR)/,$(subst $(SRC_DIR),$(OBJS_DIR),$(SRCS:.c=.o)))
 DEPS := $(addprefix $(BUILD_DIR)/,$(subst $(SRC_DIR),$(DEPS_DIR),$(SRCS:.c=.d)))
 
-# Standard variables
+# Standard variables (add "-g -Werror" to CFLAGS for debugging)
 CC      := gcc
-CFLAGS  := -std=c89 -I$(INC_DIR) -Wall -Wextra -pedantic -g #-Werror
+CFLAGS  := -std=c89 -I$(INC_DIR) -Wall -Wextra -pedantic
 LDFLAGS := -lc
 
 
