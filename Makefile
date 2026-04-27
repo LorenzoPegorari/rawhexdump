@@ -51,7 +51,7 @@ release: $(BUILD_DIR)/$(BIN)
 
 # Linking
 $(BUILD_DIR)/$(BIN): $(OBJS) $(DEPS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+	$(CC) -o $@ $(OBJS) $(LDFLAGS)
 
 # Compiling
 $(BUILD_DIR)/$(OBJS_DIR)/%.o: $(SRC_DIR)/%.c
