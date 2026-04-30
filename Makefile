@@ -38,7 +38,7 @@ DEPS := $(addprefix $(BUILD_DIR)/,$(subst $(SRC_DIR),$(DEPS_DIR),$(SRCS:.c=.d)))
 
 # Standard variables (add "-g -Werror" to CFLAGS for debugging)
 CC      := gcc
-CFLAGS  := -std=c89 -I$(INC_DIR) -Wall -Wextra -pedantic
+CFLAGS  := -std=c89 -O2 -I$(INC_DIR) -Wall -Wextra -pedantic
 LDFLAGS := -lc
 
 
