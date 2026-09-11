@@ -32,7 +32,7 @@
 #include <stddef.h>
 
 
-#define ABUF_INIT  {NULL, 0}
+#define RHD_ABUF_INIT  {NULL, 0}
 
 
 /* struct for string that supports append method */

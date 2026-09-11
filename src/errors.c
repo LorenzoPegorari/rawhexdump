@@ -25,6 +25,7 @@
 
 
 /* C89 standard */
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,10 +54,8 @@ static struct errors_queue_tag {
 void error_queue(const char* args, ...) {
     va_list     ap;
     char        buf[RHD_ERRORS_BUFFER_LEN];
-    const char* format;
+    int         chars_written;
     char*       final;
-    size_t      format_len;
-    size_t      final_len;
 
     /* If error queue is full, print warning and return */
     if (errors_queue.len >= RHD_ERRORS_QUEUE_MAX) {
@@ -64,44 +63,29 @@ void error_queue(const char* args, ...) {
         return;
     }
 
-    /* Initialize args */
+    /* Format error string "buf" */
     va_start(ap, args);
-    format = (const char*)args;
-    args = va_arg(ap, const char*);
-
-    /* Read all chars of format, and copy them in buf, substituting all instances
-       of "%s" with the correct arg (in order) */
-    format_len = 0;
-    final_len = 0;
-    while (format_len < strlen(format)) {
-        if (format[format_len] == '%' && format[format_len + 1] == 's') {
-            /* Substitute all "%s" occurrences with the correct arg (in order).
-                If the are more args than "%s", the excess args are ignored.
-                If the are more "%s" than args, an error is raised. */
-            if (args != NULL) {
-                strcpy(&(buf[final_len]), args);
-                final_len += strlen(args);
-                args = va_arg(ap, const char*);
-                format_len += 2;
-            } else {
-                fprintf(stderr, "%s\n", "ERROR: Error in errors_queue() arguments!");
-                exit(EXIT_FAILURE);
-            }
-        } else {
-            /* Simply copy all other chars that are not "%s" */
-            buf[final_len++] = format[format_len++];
-        }
-    }
-    buf[final_len++] = '\0';
-
-    /* Cleanup */
+    chars_written = vsnprintf(buf, sizeof(buf), args, ap);
     va_end(ap);
 
-    /* Copy the buffer in the final string */
-    final = (char*)malloc(final_len);
+    /* If vsnprintf() had an error, gracefully handle it by simply skipping the message */
+    if (chars_written < 0) {
+        fprintf(stderr, "WARNING: vsnprintf() failed (error_queue). REASON: %s", strerror(errno));
+        return;
+    }
+
+    /* Handle truncation error, if error message is longer than RHD_ERRORS_BUFFER_LEN */
+    if ((size_t)chars_written >= sizeof(buf)) {
+        fprintf(stderr, "WARNING: Error message truncated (error_queue).");
+        buf[sizeof(buf) - 1] = '\0';
+    }
+
+    /* Copy the buffer in the final string. If an error happens, gracefully handle it
+       by simply skipping the message */
+    final = (char*)malloc(strlen(buf) + 1);
     if (final == NULL) {
-        fprintf(stderr, "%s\n", "ERROR: Failed to queue error!");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "ERROR: malloc() failed (error_queue). REASON: %s", strerror(errno));
+        return;
     }
     strcpy(final, buf);
 

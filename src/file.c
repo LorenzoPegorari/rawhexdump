@@ -26,19 +26,21 @@
 
 /* C89 standard */
 #include <ctype.h>
+#include <errno.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "abuf.h"
+#include "errors.h"
 
 #include "file.h"
 
 
 /* Macros to convert char to hex */
-#define CHAR_TO_HEX_UPPER(c) ((((c) & 0xF0) >> 4) < '\xA' ? ((((c) & 0xF0) >> 4) + '0') : ((((c) & 0xF0) >> 4) + 'A' - '\xA'))
-#define CHAR_TO_HEX_LOWER(c) (((c) & 0x0F) < '\xA' ? (((c) & 0x0F) + '0') : (((c) & 0x0F) + 'A' - '\xA'))
+#define RHD_CHAR_TO_HEX_UPPER(c) ((((c) & 0xF0) >> 4) < '\xA' ? ((((c) & 0xF0) >> 4) + '0') : ((((c) & 0xF0) >> 4) + 'A' - '\xA'))
+#define RHD_CHAR_TO_HEX_LOWER(c) (((c) & 0x0F) < '\xA' ? (((c) & 0x0F) + '0') : (((c) & 0x0F) + 'A' - '\xA'))
 
 #define RHD_FILE_INIT {RHD_FILE_STATE_CLOSE, 0, NULL}
 
@@ -81,25 +83,38 @@ static void at_exit_callback(void);
 
 int file_open(const char* filename, const char* modes) {
     /* If file is already open, return */
-    if (file.state == RHD_FILE_STATE_OPEN)
+    if (file.state == RHD_FILE_STATE_OPEN) {
+        error_queue("WARNING: File already open (file_open).");
         return 0;
+    }
 
     /* Open file */
     file.h = fopen(filename, modes);
-    if (file.h == NULL)
+    if (file.h == NULL) {
+        error_queue("ERROR: fopen() failed when opening \"%s\" (file_open). REASON: %s", strerror(errno));
         return 1;
+    }
     file.state = RHD_FILE_STATE_OPEN;
 
     /* Register at_exit_callback() */
-    atexit(at_exit_callback);
+    if (atexit(at_exit_callback) != 0) {
+        error_queue("ERROR: Could not set exit handler (file_open).\n");
+        return 2;
+    }
 
     /* Get file length */
-    if (fseek(file.h, 0, SEEK_END) == -1)
-        return 2;
-    if ((file.len = file_tell()) == -1)
-        return 2;
-    if (fseek(file.h, 0, SEEK_SET) == -1)
-        return 2;
+    if (fseek(file.h, 0, SEEK_END) == -1) {
+        error_queue("ERROR: fseek() failed (file_open). REASON: %s", strerror(errno));
+        return 3;
+    }
+    if ((file.len = file_tell()) == -1) {
+        error_queue("ERROR: fseek() failed (file_open). REASON: %s", strerror(errno));
+        return 3;
+    }
+    if (fseek(file.h, 0, SEEK_SET) == -1) {
+        error_queue("ERROR: fseek() failed (file_open). REASON: %s", strerror(errno));
+        return 3;
+    }
 
     return 0;
 }
@@ -107,12 +122,16 @@ int file_open(const char* filename, const char* modes) {
 
 int file_close(void) {
     /* If file is already close, return */
-    if (file.state == RHD_FILE_STATE_CLOSE)
+    if (file.state == RHD_FILE_STATE_CLOSE) {
+        error_queue("WARNING: File not open (file_close).");
         return 0;
+    }
 
     /* Close file */
-    if (fclose(file.h) == EOF)
+    if (fclose(file.h) == EOF) {
+        error_queue("ERROR: fclose() failed (file_close). REASON: %s", strerror(errno));
         return 1;
+    }
     file.state = RHD_FILE_STATE_CLOSE;
 
     return 0;
@@ -121,132 +140,150 @@ int file_close(void) {
 
 /* READ */
 
-size_t file_append_bytes(abuf_t* ab, const size_t len) {
+int file_append_bytes(abuf_t* ab, const size_t len, size_t* const n_bytes_read) {
     char*  temp;
-    size_t n_bytes_read;
 
-    /* If given "len" is 0, return error */
+    *n_bytes_read = 0;
+
+    /* If given "len" is 0, return */
     if (len == 0)
         return 0;
 
     /* Allocate "len" bytes to "temp" */
-    if ((temp = malloc(len)) == NULL)
-        return 0;
+    if ((temp = malloc(len)) == NULL) {
+        error_queue("ERROR: malloc() failed (file_append_bytes). REASON: %s", strerror(errno));
+        return 1;
+    }
 
     /* Try to read "len" bytes and write them into "temp", and get actual "n_bytes_read" */
-    if ((n_bytes_read = fread(temp, 1, len, file.h)) < len && !feof(file.h)) {
+    if ((*n_bytes_read = fread(temp, 1, len, file.h)) < len && !feof(file.h)) {
         free(temp);
-        return 0;
+        error_queue("ERROR: fread() error (file_append_bytes). REASON: %s", strerror(errno));
+        return 2;
     }
 
     /* Append read bytes (from "temp") to given "ab" */
-    if (ab_append(ab, temp, n_bytes_read)) {
+    if (ab_append(ab, temp, *n_bytes_read)) {
         free(temp);
-        return 0;
+        error_queue("ERROR: Buffer append failed during file read (file_append_bytes).");
+        return 3;
     }
 
     free(temp);
 
-    return n_bytes_read;
+    return 0;
 }
 
 
-size_t file_append_formatted_hexs(abuf_t* ab, const size_t len) {
-    size_t n_bytes_read;
-    abuf_t temp = ABUF_INIT;
+int file_append_formatted_hexs(abuf_t* ab, const size_t len, size_t* const n_bytes_read) {
+    abuf_t temp = RHD_ABUF_INIT;
     char*  temp_long;
     size_t i;
 
-    /* If given "len" is 0, return error */
+    /* If given "len" is 0, return */
     if (len == 0)
         return 0;
 
     /* Read "len" bytes and append them to "temp", and get actual "n_bytes_read" */
-    if ((n_bytes_read = file_append_bytes(&temp, len)) == 0) {
+    if (file_append_bytes(&temp, len, n_bytes_read) != 0) {
         ab_free(&temp);
-        return 0;
+        error_queue("ERROR: Failed to read bytes from file (file_append_formatted_hexs). REASON: %s", strerror(errno));
+        return 1;
     }
+
+    /* If no bytes have been read, return */
+    if (*n_bytes_read == 0)
+        return 0;
 
     /* To read the bytes and convert them in hexadecimal form with spaces in-between,
        we need 3 times the amount of space, minus 1, because we don't need the last space.
        This is done in order to get the following: "bbb" = "xx xx xx" (b = byte, h = hex).
        We allocate this required space in "temp_long". */
-    if ((temp_long = malloc(n_bytes_read * 3 - 1)) == NULL)
-        return 0;
+    if ((temp_long = malloc(*n_bytes_read * 3 - 1)) == NULL) {
+        error_queue("ERROR: malloc() failed (file_append_formatted_hexs). REASON: %s", strerror(errno));
+        return 2;
+    }
 
     /* Convert all bytes to hexadecimal, with a space in-between */
-    for (i = 0; i < n_bytes_read; i++) {
-        temp_long[i * 3] = CHAR_TO_HEX_UPPER(temp.b[i]);
-        temp_long[i * 3 + 1] = CHAR_TO_HEX_LOWER(temp.b[i]);
-        if (i < n_bytes_read - 1)
+    for (i = 0; i < *n_bytes_read; i++) {
+        temp_long[i * 3] = RHD_CHAR_TO_HEX_UPPER(temp.b[i]);
+        temp_long[i * 3 + 1] = RHD_CHAR_TO_HEX_LOWER(temp.b[i]);
+        if (i < *n_bytes_read - 1)
             temp_long[i * 3 + 2] = ' ';
     }
 
     ab_free(&temp);
 
     /* Append final hexadecimal string (from "temp_long") to given "ab" */
-    if (ab_append(ab, temp_long, n_bytes_read * 3 - 1) == 1) {
+    if (ab_append(ab, temp_long, *n_bytes_read * 3 - 1) == 1) {
         free(temp_long);
-        return 0;
+        error_queue("ERROR: Buffer append failed during file read (file_append_formatted_hexs).");
+        return 3;
     }
 
     free(temp_long);
 
-    return n_bytes_read;
+    return 0;
 }
 
 
-size_t file_append_formatted_chars(abuf_t* ab, const size_t len) {
-    size_t n_bytes_read;
-    abuf_t temp = ABUF_INIT;
+int file_append_formatted_chars(abuf_t* ab, const size_t len, size_t* const n_bytes_read) {
+    abuf_t temp = RHD_ABUF_INIT;
     char*  temp_long;
     size_t i;
 
-    /* If given "len" is 0, return error */
+    /* If given "len" is 0, return */
     if (len == 0)
         return 0;
 
     /* Read "len" bytes and append them to "temp", and get actual "n_bytes_read" */
-    if ((n_bytes_read = file_append_bytes(&temp, len)) == 0) {
+    if (file_append_bytes(&temp, len, n_bytes_read) != 0) {
         ab_free(&temp);
-        return 0;
+        error_queue("ERROR: Failed to read bytes from file (file_append_formatted_chars).");
+        return 1;
     }
+
+    /* If no bytes have been read, return */
+    if (*n_bytes_read == 0)
+        return 0;
 
     /* To read the bytes and convert them in ASCII form with spaces in-between,
        we need 3 times the amount of space, minus 1, because we don't need the last space.
        This is done in order to get the following: "bbb" = " c  c  c" (b = byte, c = char).
        We allocate this required space in "temp_long". */
-    if ((temp_long = malloc(n_bytes_read * 3 - 1)) == NULL)
-        return 0;
+    if ((temp_long = malloc(*n_bytes_read * 3 - 1)) == NULL) {
+        error_queue("ERROR: malloc() failed (file_append_formatted_chars). REASON: %s", strerror(errno));
+        return 2;
+    }
 
     /* Convert all bytes to ASCII (when readable), with a space in-between */
-    for (i = 0; i < n_bytes_read; i++) {
+    for (i = 0; i < *n_bytes_read; i++) {
         temp_long[i * 3] = ' ';
         if (isprint(temp.b[i]) == 0)
             temp_long[i * 3 + 1] = '.';
         else
             temp_long[i * 3 + 1] = temp.b[i];
-        if (i < n_bytes_read - 1)
+        if (i < *n_bytes_read - 1)
             temp_long[i * 3 + 2] = ' ';
     }
 
     ab_free(&temp);
 
     /* Append final ASCII string (from "temp_long") to given "ab" */
-    if (ab_append(ab, temp_long, n_bytes_read * 3 - 1)) {
+    if (ab_append(ab, temp_long, *n_bytes_read * 3 - 1)) {
         free(temp_long);
-        return 0;
+        error_queue("ERROR: Buffer append failed during file read (file_append_formatted_chars).");
+        return 3;
     }
 
     free(temp_long);
 
-    return n_bytes_read;
+    return 0;
 }
 
 
-size_t file_append_chars(abuf_t* ab, const size_t len) {
-    size_t n_bytes_read;
-    abuf_t temp = ABUF_INIT;
+int file_append_chars(abuf_t* ab, const size_t len, size_t* const n_bytes_read) {
+    abuf_t temp = RHD_ABUF_INIT;
     size_t i;
 
     /* If given "len" is 0, return error */
@@ -254,26 +291,32 @@ size_t file_append_chars(abuf_t* ab, const size_t len) {
         return 0;
 
     /* Read "len" bytes and append them to "temp", and get actual "n_bytes_read" */
-    if ((n_bytes_read = file_append_bytes(&temp, len)) == 0) {
+    if (file_append_bytes(&temp, len, n_bytes_read) != 0) {
         ab_free(&temp);
-        return 0;
+        error_queue("ERROR: Failed to read bytes from file (file_append_chars).");
+        return 1;
     }
 
+    /* If no bytes have been read, return */
+    if (*n_bytes_read == 0)
+        return 0;
+
     /* Read the bytes and convert them in ASCII form */
-    for (i = 0; i < n_bytes_read; i++) {
+    for (i = 0; i < *n_bytes_read; i++) {
         if (isprint(temp.b[i]) == 0)
             temp.b[i] = '.';
     }
 
     /* Append final ASCII string (from "temp") to given "ab" */
-    if (ab_append(ab, temp.b, n_bytes_read)) {
+    if (ab_append(ab, temp.b, *n_bytes_read)) {
         ab_free(&temp);
-        return 0;
+        error_queue("ERROR: Buffer append failed during file read (file_append_chars).");
+        return 2;
     }
 
     ab_free(&temp);
 
-    return n_bytes_read;
+    return 0;
 }
 
 
@@ -282,18 +325,31 @@ size_t file_append_chars(abuf_t* ab, const size_t len) {
 int file_move(const long int bytes) {
     long int pos;
 
+    /* Get current file position */
+    if ((pos = file_tell()) == -1) {
+        error_queue("ERROR: Failed to get current file position indicator (file_move).");
+        return 1;
+    }
+
     /* If the movement would cause the file position indicator
         to end up out of the file, do no move instead */
-    if ((pos = file_tell()) == -1)
-        return 1;
     if (pos + bytes >= file.len)
         return 0;
 
+    /* If the movement would cause the file position indicator
+        to become negative, move to the beginning instead */
+    if (pos + bytes < 0) {
+        if (file_seek_set(0) != 0) {
+            error_queue("ERROR: Failed to set file position indicator to beginning of file (file_move).");
+            return 2;
+        }
+        return 0;
+    }
+
     /* Move the file position indicator */
     if (fseek(file.h, bytes, SEEK_CUR) == -1) {
-        /* If an error happens, try to move to the start of the file */
-        if (fseek(file.h, 0, SEEK_SET) == -1)
-            return 1;
+        error_queue("ERROR: fseek() failed (file_move). REASON: %s (file_move)", strerror(errno));
+        return 3;
     }
 
     return 0;
@@ -302,15 +358,19 @@ int file_move(const long int bytes) {
 
 long int file_tell(void) {
     long int pos;
-    if ((pos = ftell(file.h)) < 0)
+    if ((pos = ftell(file.h)) < 0) {
+        error_queue("ERROR: ftell() failed (file_tell). REASON: %s (file_tell)", strerror(errno));
         return -1;
+    }
     return pos;
 }
 
 
 int file_seek_set(const long bytes) {
-    if (fseek(file.h, bytes, SEEK_SET) == -1)
+    if (fseek(file.h, bytes, SEEK_SET) == -1) {
+        error_queue("ERROR: fseek() failed (file_seek_set). REASON: %s (file_seek_set)", strerror(errno));
         return 1;
+    }
     return 0;
 }
 
@@ -321,8 +381,7 @@ static void at_exit_callback(void) {
     /* Close file if open */
     if (file.state == RHD_FILE_STATE_OPEN) {
         if (file_close() != 0) {
-            fprintf(stderr, "ERROR: Could not close opened file!\n");
-            fprintf(stderr, "    -> %s\n", strerror(errno));
+            error_queue("ERROR: Could not close opened file (at_exit_callback). REASON: %s\n", strerror(errno));
         }
     }
 }

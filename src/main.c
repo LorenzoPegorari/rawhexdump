@@ -41,7 +41,16 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "errors.h"
 #include "raw_terminal.h"
+
+
+/* --------------------------- STATIC PROTOTYPES --------------------------- */
+
+/**
+ * Callback function registered with atexit() that flushes error messages
+ */
+static void at_exit_callback(void);
 
 
 /* --------------------------------- MAIN ---------------------------------- */
@@ -50,10 +59,17 @@ int main(int argc, char* argv[]) {
     char* filename;
     int   i;
 
+    /* Register at_exit_callback(). If this fails, we must immediately use fprintf to print
+       an error, and exit (because we don't have access to errors.h functions) */
+    if (atexit(at_exit_callback) != 0) {
+        fprintf(stderr, "ERROR: Could not set exit handler (main).\n");
+        exit(EXIT_FAILURE);
+    }
+
     /* If no arguments were given, exit */
     if (argc < 2) {
-        fprintf(stderr, "ERROR: Arguments missing!\n");
-        fprintf(stderr, "Usage: %s [-v | --version] [-h | --help] <file-path>\n", argv[0]);
+        printf("ERROR: Arguments missing!\n");
+        error_queue("Usage: %s [-v | --version] [-h | --help] <file-path>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -61,25 +77,25 @@ int main(int argc, char* argv[]) {
     filename = NULL;
     for (i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
-            fprintf(stdout, "Usage: %s [-v | --version] [-h | --help] <file-path>\n", argv[0]);
-            fprintf(stdout, "\nUsable commands:\n");
-            fprintf(stdout, "         W = move up one row\n");
-            fprintf(stdout, "         S = move down one row\n");
-            fprintf(stdout, "         A = move up one page\n");
-            fprintf(stdout, "         D = move down one page\n");
-            fprintf(stdout, "         H = hexadecimal view (linked to char view)\n");
-            fprintf(stdout, "         C = char view (linked to hexadecimal view)\n");
-            fprintf(stdout, "    CTRL+C = compacted char view\n");
-            fprintf(stdout, "    CTRL+Q = quit\n");
+            printf("Usage: %s [-v | --version] [-h | --help] <file-path>\n", argv[0]);
+            printf("\nUsable commands:\n");
+            printf("         W = move up one row\n");
+            printf("         S = move down one row\n");
+            printf("         A = move up one page\n");
+            printf("         D = move down one page\n");
+            printf("         H = hexadecimal view (linked to char view)\n");
+            printf("         C = char view (linked to hexadecimal view)\n");
+            printf("    CTRL+C = compacted char view\n");
+            printf("    CTRL+Q = quit\n");
             exit(EXIT_SUCCESS);
         } else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--version") == 0) {
-            fprintf(stdout, "%s version %s\n", argv[0], RHD_MAIN_VER);
+            printf("%s version %s\n", argv[0], RHD_MAIN_VER);
             exit(EXIT_SUCCESS);
         } else {
             if (filename == NULL) {
                 filename = argv[i];
             } else {
-                fprintf(stderr, "ERROR: Given too many files! (maybe an unrecognized argument was passed?)\n");
+                error_queue("ERROR: Given too many files or given an unrecognized argument (main).\n");
                 exit(EXIT_FAILURE);
             }
         }
@@ -98,4 +114,12 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
 
     exit(EXIT_SUCCESS);
+}
+
+
+/* --------------------------- STATIC FUNCTIONS ---------------------------- */
+
+static void at_exit_callback(void) {
+    /* Flush errors queue (if they happened) */
+    error_flush();
 }

@@ -25,8 +25,11 @@
 
 
 /* C89 standard */
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "errors.h"
 
 #include "abuf.h"
 
@@ -36,8 +39,10 @@
 int ab_append(abuf_t* ab, const char* s, const size_t len) {
     char* new_b;
 
-    if ((new_b = realloc(ab->b, ab->len + len)) == NULL)
+    if ((new_b = realloc(ab->b, ab->len + len)) == NULL) {
+        error_queue("ERROR: realloc() failed (ab_append). REASON: %s", strerror(errno));
         return 1;
+    }
 
     memcpy(&new_b[ab->len], s, len);
     ab->b = new_b;

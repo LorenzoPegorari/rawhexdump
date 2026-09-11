@@ -36,11 +36,11 @@
 
 
 /**
- * Opens given "filename" file with given "modes".
+ * Opens given "filename" file with given "modes", unless it's already open.
  * If successful returns 0, else:
- *  - -1 = file already open
- *  -  1 = error while opening given file
- *  -  2 = error in file position indicator
+ *  - 1 = error while opening given file
+ *  - 2 = error while setting atexit callback
+ *  - 3 = error in file position indicator
  */
 int file_open(const char* filename, const char* modes);
 
@@ -51,36 +51,54 @@ int file_open(const char* filename, const char* modes);
 int file_close(void);
 
 /**
- * Appends to given "ab" the given "len" amount of bytes (chars), read from the file.
- * If successful returns the amount of bytes actually read, else 0.
+ * Tries to read the given "len" amount of bytes (chars) from the file, sets "n_bytes_read"
+ * to the actual amount of bytes read, and appends those bytes to the given "ab".
+ * If successful returns 0, else:
+ *  - 1 = error while allocating memory
+ *  - 2 = error while reading given file
+ *  - 3 = error during buffer append
  */
-size_t file_append_bytes(abuf_t* ab, const size_t len);
+int file_append_bytes(abuf_t* ab, const size_t len, size_t* const n_bytes_read);
 
 /**
- * Appends to given "ab" the given "len" amount of bytes in hexadecimal form, with
- * a space in between the (like this: "xx xx xx"), read from the file.
- * If successful returns the amount of bytes actually read, else 0.
+ * Tries to read the given "len" amount of bytes (chars) from the file, sets "n_bytes_read"
+ * to the actual amount of bytes read, and appends those bytes to the given "ab" in
+ * hexadecimal form, with a space in between them (like this: "xx xx xx").
+ * If successful returns 0, else:
+ *  - 1 = error while reading given file
+ *  - 2 = error while allocating memory
+ *  - 3 = error during buffer append
  */
-size_t file_append_formatted_hexs(abuf_t* ab, const size_t len);
+int file_append_formatted_hexs(abuf_t* ab, const size_t len, size_t* const n_bytes_read);
 
 /**
- * Appends to given "ab" the given "len" amount of bytes in ASCII form, with
- * a space in between the (like this: " c  c  c"), read from the file.
- * If successful returns the amount of bytes actually read, else 0.
+ * Tries to read the given "len" amount of bytes (chars) from the file, sets "n_bytes_read"
+ * to the actual amount of bytes read, and appends those bytes to the given "ab" in
+ * ASCII form, with a space in between them (like this: " c  c  c").
+ * If successful returns 0, else:
+ *  - 1 = error while reading given file
+ *  - 2 = error while allocating memory
+ *  - 3 = error during buffer append
  */
-size_t file_append_formatted_chars(abuf_t* ab, const size_t len);
+int file_append_formatted_chars(abuf_t* ab, const size_t len, size_t* const n_bytes_read);
 
 /**
- * Appends to given "ab" the given "len" amount of bytes in ASCII form read from the file.
- * If successful returns the amount of bytes actually read, else 0.
+ * Tries to read the given "len" amount of bytes (chars) from the file, sets "n_bytes_read"
+ * to the actual amount of bytes read, and appends those bytes to the given "ab" in
+ * ASCII form, without a space in between them (like this: "ccc").
+ * If successful returns 0, else:
+ *  - 1 = error while reading given file
+ *  - 2 = error during buffer append
  */
-size_t file_append_chars(abuf_t* ab, const size_t len);
+int file_append_chars(abuf_t* ab, const size_t len, size_t* const n_bytes_read);
 
 /**
  * Move file position indicator.
  * If the file position indicator would go out of the file (towards SEEK_SET), it moves to SEEK_SET.
  * If the file position indicator would go out of the file (towards SEEK_END), it doesn't move.
- * If successful returns 0, else 1.
+ * If successful returns 0, else:
+ *  - 1 = error while getting file position indicator
+ *  - 2 = error while setting file position indicator to beginning of file
  */
 int file_move(const long int bytes);
 

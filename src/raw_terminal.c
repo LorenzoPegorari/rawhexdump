@@ -24,10 +24,12 @@
 /** @file raw_terminal.c */
 
 
-#define _XOPEN_SOURCE 700  /* Incorporating POSIX 2017 (for sigaction) */
+#define _XOPEN_SOURCE           700  /* Incorporating POSIX 2017 (for sigaction) */
+#define __STDC_WANT_LIB_EXT2__  1    /* To enable function vsnprintf() */
 
 /* C89 standard */
 #include <errno.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -97,7 +99,7 @@ typedef struct term_output_tag {
     term_output_id_t id;
     long int         pos;
     long int         row_len;
-    size_t           (*file_read_func)(abuf_t*, const size_t);
+    int              (*file_read_func)(abuf_t*, const size_t, size_t* const);
 } term_output_t;
 
 
@@ -234,20 +236,19 @@ int term_init(const char* filename) {
 
     /* If terminal is already in raw mode, return */
     if (term_is_init == RHD_TERM_INIT_TRUE) {
-        error_queue("WARNING: Terminal is already initialized!");
+        error_queue("WARNING: Terminal is already initialized (term_init).");
         return 0;
     }
 
     /* Open file with given "filename" */
     if (file_open(filename, "rb") != 0) {
-        fprintf(stderr, "ERROR: Could not open file!\n");
-        fprintf(stderr, "    -> %s\n", strerror(errno));
+        error_queue("ERROR: Couldn't open given file (term_init). REASON: %s", strerror(errno));
         return 1;
     }
 
     /* Register at_exit_callback() */
     if (atexit(at_exit_callback) != 0) {
-        fprintf(stderr, "ERROR: Could not set exit handler!\n");
+        error_queue("ERROR: Could not set exit handler (term_init).\n");
         return 2;
     }
 
@@ -260,23 +261,21 @@ int term_init(const char* filename) {
     sigwinch.sa.sa_handler = sigwinch_handler;
     sigwinch.sa.sa_flags   = SA_RESTART;
     if (sigaction(SIGWINCH, &sigwinch.sa, NULL) == -1) {
-        fprintf(stderr, "ERROR: Could not set sigaction for SIGWINCH!\n");
-        fprintf(stderr, "    -> %s\n", strerror(errno));
+        error_queue("ERROR: Could not set sigaction for SIGWINCH (term_init). REASON: %s", strerror(errno));
         return 3;
     }
     if (raise(SIGWINCH) != 0) {
-        fprintf(stderr, "ERROR: Could not raise SIGWINCH!\n");
+        error_queue("ERROR: Could not raise SIGWINCH (term_init).");
         return 4;
     }
     if (sigwinch.state == RHD_TERM_SIGWINCH_STATE_ERROR) {
-        fprintf(stderr, "ERROR: Error while handling SIGWINCH!\n");
+        error_queue("ERROR: Error while handling SIGWINCH (term_init).");
         return 5;
     }
 
     /* Get terminal initial state and save it for later */
     if (tcgetattr(STDIN_FILENO, &term.initial_state) == -1) {
-        fprintf(stderr, "ERROR: Could not get terminal initial state!\n");
-        fprintf(stderr, "    -> %s\n", strerror(errno));
+        error_queue("ERROR: Could not get terminal initial state (term_init). REASON: %s", strerror(errno));
         return 6;
     }
 
@@ -310,8 +309,7 @@ int term_init(const char* filename) {
 
     /* Set terminal in the just defined raw mode */
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
-        fprintf(stderr, "ERROR: Could not set terminal raw state!\n");
-        fprintf(stderr, "    -> %s\n", strerror(errno));
+        error_queue("ERROR: Could not set terminal raw state (term_init). REASON: %s\n", strerror(errno));
         return 7;
     }
 
@@ -325,25 +323,21 @@ int term_init(const char* filename) {
 int term_disable_raw_mode(void) {
     /* If terminal is not in raw mode, return */
     if (term_is_init == RHD_TERM_INIT_FALSE) {
-        fprintf(stderr, "WARNING: Terminal was not initialized!");
+        error_queue("WARNING: Terminal was not initialized (term_disable_raw_mode).");
         return 0;
     }
 
     /* Restore terminal initial state */
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &term.initial_state) == -1) {
-        fprintf(stderr, "ERROR: Could not set terminal initial state!");
+        error_queue("ERROR: Could not set terminal initial state (term_disable_raw_mode).");
         return 1;
     }
 
     /* Close file if open */
     if (file_close() != 0) {
-        fprintf(stderr, "ERROR: Could not close opened file!\n");
-        fprintf(stderr, "    -> %s\n", strerror(errno));
+        error_queue("ERROR: Could not close opened file (term_disable_raw_mode). REASON: %s\n", strerror(errno));
         return 2;
     }
-
-    /* Flush errors queue (if they happened) */
-    error_flush();
 
     /* Set terminal in raw mode */
     term_is_init = RHD_TERM_INIT_FALSE;
@@ -364,7 +358,7 @@ int term_loop(void) {
 
     /* Hide cursor */
     if (write(STDOUT_FILENO, RHD_TERM_VT100_CUR_HIDE, sizeof(RHD_TERM_VT100_CUR_HIDE) - 1) == -1) {
-        error_queue("ERROR: Function write() failed!");
+        error_queue("ERROR: Function write() failed (term_loop).");
         return 5;
     }
 
@@ -372,7 +366,7 @@ int term_loop(void) {
     do {
         /* Check if an eventual SIGWINCH was handled correctly */
         if (sigwinch.state == RHD_TERM_SIGWINCH_STATE_ERROR) {
-            error_queue("ERROR: SIGWINCH signal was not handled correctly!");
+            error_queue("ERROR: SIGWINCH signal was not handled correctly (term_loop).");
             ret = 4;
             break;
         }
@@ -380,7 +374,7 @@ int term_loop(void) {
         /* If the keypress is an action, it requires a screen refresh */
         if (keypress == RHD_TERM_KEYPRESS_ACT) {
             if (term_screen_refresh() != 0) {
-                error_queue("ERROR: Couldn't refresh screen!");
+                error_queue("ERROR: Couldn't refresh screen (term_loop).");
                 ret = 2;
                 break;
             }
@@ -388,7 +382,7 @@ int term_loop(void) {
 
         /* Process the new keypress */
         if ((keypress = term_process_keypress()) == RHD_TERM_KEYPRESS_ERROR) {
-            error_queue("ERROR: Couldn't process keypress!");
+            error_queue("ERROR: Couldn't process keypress (term_loop).");
             ret = 1;
             break;
         }
@@ -397,14 +391,14 @@ int term_loop(void) {
     if (keypress == RHD_TERM_KEYPRESS_QUIT) {
         /* If the keypress is a graceful quit, do a final screen refresh */
         if (term_screen_clear() != 0) {
-            error_queue("ERROR: Couldn't clear screen!");
+            error_queue("ERROR: Couldn't clear screen (term_loop).");
             ret = 3;
         }
     }
 
     /* Show cursor */
     if (write(STDOUT_FILENO, RHD_TERM_VT100_CUR_SHOW, sizeof(RHD_TERM_VT100_CUR_SHOW) - 1) == -1) {
-        error_queue("ERROR: Function write() failed!");
+        error_queue("ERROR: Function write() failed (term_loop).");
         return 5;
     }
 
@@ -460,7 +454,7 @@ static int term_get_win_size(void) {
 
     /* Tries to use ioctl() with the TIOCGWINSZ request (inside sys/ioctl.h) to get terminal window size */
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_row == 0 || ws.ws_col == 0) {
-        error_queue("ERROR: Function ioctl() failed!");
+        error_queue("ERROR: Function ioctl() failed (term_get_win_size).");
         return 1;
     }
 
@@ -478,7 +472,7 @@ static int term_output_save(void) {
 
     /* Get current pos of active output */
     if ((curr_pos = file_tell()) == -1) {
-        error_queue("ERROR: Couldn't get current position in file!");
+        error_queue("ERROR: Couldn't get current position in file (term_output_save).");
         return 1;
     }
 
@@ -499,7 +493,7 @@ static int term_output_save(void) {
             break;
 
         default:
-            error_queue("ERROR: Unrecognized output id!");
+            error_queue("ERROR: Unrecognized output id (term_output_save).");
             return 1;
     }
 
@@ -510,7 +504,7 @@ static int term_output_save(void) {
 static int term_output_change(const term_output_id_t output_id) {
     /* Saves active output before changing it */
     if (term_output_save() != 0) {
-        error_queue("ERROR: Couldn't save output!");
+        error_queue("ERROR: Couldn't save output (term_output_change).");
         return 1;
     }
 
@@ -529,13 +523,13 @@ static int term_output_change(const term_output_id_t output_id) {
             break;
 
         default:
-            error_queue("ERROR: Unrecognized output id!");
+            error_queue("ERROR: Unrecognized output id (term_output_change).");
             return 1;
     }
 
     /* Move file to "pos" of new "active_output" */
-    if (file_seek_set(term.active_output->pos) == 1) {
-        error_queue("ERROR: Couldn't move file position indicator!");
+    if (file_seek_set(term.active_output->pos) != 0) {
+        error_queue("ERROR: Couldn't move file position indicator (term_output_change).");
         return 1;
     }
 
@@ -544,22 +538,29 @@ static int term_output_change(const term_output_id_t output_id) {
 
 
 static int term_output_adjust_after_sigwinch(void) {
+    long int min_row_len = 1;
+
     /* Update terminal window size */
     if (term_get_win_size() != 0) {
-        error_queue("ERROR: Couldn't get terminal window size!");
+        error_queue("ERROR: Couldn't get terminal window size (term_output_adjust_after_sigwinch).");
         return 1;
     }
 
     /* Saves output */
     if (term_output_save() != 0) {
-        error_queue("ERROR: Couldn't save output!");
+        error_queue("ERROR: Couldn't save output (term_output_adjust_after_sigwinch).");
         return 1;
     }
 
-    /* Update outputs "row_len" (meaning the amount of bytes that appears in a row in the term) */
+    /* Update outputs "row_len" (meaning the amount of bytes that appears in a row in the term).
+       Let's be sure that they cannot possibly have value 0 (even though this shouldn't happen,
+       unless the terminal width is 2 cols or less). */
     output_formhex.row_len  = term.screen_cols / 3;
     output_formchar.row_len = term.screen_cols / 3;
     output_char.row_len     = term.screen_cols;
+    output_formhex.row_len  = output_formhex.row_len  ? output_formhex.row_len  : min_row_len;
+    output_formchar.row_len = output_formchar.row_len ? output_formchar.row_len : min_row_len;
+    output_char.row_len     = output_char.row_len     ? output_char.row_len     : min_row_len;
 
     /* Update outputs "pos" (adjusting them based on the new "row_len") */
     output_formhex.pos  = output_formhex.pos  - (output_formhex.pos  % output_formhex.row_len );
@@ -568,7 +569,7 @@ static int term_output_adjust_after_sigwinch(void) {
 
     /* Move file to "pos" of "active_output" */
     if (file_seek_set(term.active_output->pos) != 0) {
-        error_queue("ERROR: Couldn't move file position indicator!");
+        error_queue("ERROR: Couldn't move file position indicator (term_output_adjust_after_sigwinch).");
         return 1;
     }
 
@@ -660,7 +661,7 @@ static int term_read_key(char *c) {
     /* Wait for key press, and get char pressed */
     while ((n_bytes_read = read(STDIN_FILENO, c, 1)) != 1) {
         if (n_bytes_read == -1 && errno != EAGAIN) {
-            error_queue("ERROR: Couldn't read keypress!");
+            error_queue("ERROR: Couldn't read keypress (term_read_key).");
             return 1;
         }
     }
@@ -672,11 +673,11 @@ static int term_read_key(char *c) {
 /* OUTPUT */
 
 static int term_screen_refresh(void) {
-    abuf_t ab = ABUF_INIT;
+    abuf_t ab = RHD_ABUF_INIT;
 
     /* Initialize start of "ab" for screen refresh */
     if (ab_append(&ab, RHD_TERM_VT100_CUR_TOP_LEFT, sizeof(RHD_TERM_VT100_CUR_TOP_LEFT) - 1) == 1) {
-        error_queue("ERROR: Function ab_append() failed!");
+        error_queue("ERROR: Function ab_append() failed (term_screen_refresh).");
         return 1;
     }
 
@@ -685,13 +686,13 @@ static int term_screen_refresh(void) {
 
     /* Initialize end of "ab" for screen refresh */
     if (ab_append(&ab, RHD_TERM_VT100_CUR_TOP_LEFT, sizeof(RHD_TERM_VT100_CUR_TOP_LEFT) - 1) == 1) {
-        error_queue("ERROR: Function ab_append() failed!");
+        error_queue("ERROR: Function ab_append() failed (term_screen_refresh).");
         return 1;
     }
 
     /* Write "ab" (actual screen refresh) */
     if (write(STDOUT_FILENO, ab.b, ab.len) == -1) {
-        error_queue("ERROR: Function write() failed!");
+        error_queue("ERROR: Function write() failed (term_screen_refresh).");
         return 1;
     }
 
@@ -702,25 +703,34 @@ static int term_screen_refresh(void) {
 
 
 static int term_screen_prepare_rows(abuf_t* ab) {
-    size_t       bytes;
+    long int     bytes;
+    size_t       n_bytes_read;
     unsigned int y;
 
     /* Loop all rows of terminal */
     bytes = 0;
     for (y = 0; y < term.screen_rows; y++) {
 
-        /* Fill "ab" buffer with characters read from the current row
-           of the file, with the correct mode ("read_file_func") */
-        bytes += term.active_output->file_read_func(ab, term.active_output->row_len);
+        /* Fill "ab" buffer with characters read from the current row of the file,
+           with the correct mode ("read_file_func") */
+        term.active_output->file_read_func(ab, term.active_output->row_len, &n_bytes_read);
+        
+        /* Handle potential overflow before adding */
+        if (n_bytes_read > (size_t)(LONG_MAX - bytes)) {
+            error_queue("WARNING: Total bytes read exceeds long int capacity (term_screen_prepare_rows).");
+            bytes = LONG_MAX;  /* Cap to prevent overflow */
+        } else {
+            bytes += (long int)n_bytes_read;
+        }
 
         /* Add newline at the end, except for last row */
         if (ab_append(ab, RHD_TERM_VT100_ERASE_LINE, sizeof(RHD_TERM_VT100_ERASE_LINE) - 1) == 1) {
-            error_queue("ERROR: Function ab_append() failed!");
+            error_queue("ERROR: Function ab_append() failed (term_screen_prepare_rows).");
             return 1;
         }
         if (y < term.screen_rows - 1) {
             if (ab_append(ab, "\r\n", 2) == 1) {
-                error_queue("ERROR: Function ab_append() failed!");
+                error_queue("ERROR: Function ab_append() failed (term_screen_prepare_rows).");
                 return 1;
             }
         }
@@ -728,8 +738,8 @@ static int term_screen_prepare_rows(abuf_t* ab) {
 
     /* Moves the file position indicator back to the beginning of the terminal page
        (meaning where the file position indicator was before calling this function) */
-    if (file_move(-1 * ((long int)bytes)) != 0) {  /* DANGEROUS: converting size_t to long int */
-        error_queue("ERROR: Couldn't save output!");
+    if (file_move(-1 * bytes) != 0) {
+        error_queue("ERROR: Couldn't save output (term_screen_prepare_rows).");
         return 1;
     }
 
@@ -740,7 +750,7 @@ static int term_screen_prepare_rows(abuf_t* ab) {
 static int term_screen_clear(void) {
     /* Clear screen */
     if (write(STDOUT_FILENO, RHD_TERM_VT100_ERASE_SCREEN, sizeof(RHD_TERM_VT100_ERASE_SCREEN) - 1) == -1) {
-        error_queue("ERROR: Function write() failed!");
+        error_queue("ERROR: Function write() failed (term_screen_clear).");
         return 1;
     }
     return 0;
